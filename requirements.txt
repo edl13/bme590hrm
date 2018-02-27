@@ -1,5 +1,5 @@
 numpy
 scipy
-pandas
 pytest
 pytest-pep8
+logging
