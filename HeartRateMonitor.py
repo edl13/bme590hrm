@@ -120,25 +120,29 @@ class HeartRateMonitor(object):
         dt = t[1] - t[0]
 
         # Remove dc offsets
-        avg_len = 200
+        avg_len = 50
         v_dc = v - np.convolve(v, np.ones(avg_len) / avg_len, mode='same')
 
         # Autocorrelation
-        std = np.std(v_dc)
-        corr = np.correlate(v_dc, v_dc, mode='full')
-        corr = corr[int(len(corr) / 2):]
-        corr = np.divide(corr, pow(std, 2))
-        # Autocorrelation peak detection with scipy.
-        peaks = signal.find_peaks_cwt(corr, np.arange(1, 20), noise_perc=50,
-                                      min_snr=1.5)
+        # std = np.std(v_dc)
+        corr1 = np.correlate(v_dc, v_dc, mode='full')
+        corr1 = np.divide(corr1, max(corr1))
+        # corr2 = np.correlate(corr1, corr1, mode='full')
+        corr1 = corr1[int(len(corr1) / 2):]
 
-        # Record peaks with correlation > 20
-        corr_thresh = 20
-        lags = peaks[corr[peaks] > corr_thresh]
+        # Autocorrelation peak detection with scipy.
+        widths = np.arange(1, 20)
+        peaks = signal.find_peaks_cwt(corr1, widths, noise_perc=70,
+                                      min_snr=45,
+                                      max_distances=np.divide(widths, 2))
+
+        # Record peaks with positive correlation
+        corr_thresh = 0
+        lags = peaks[corr1[peaks] > corr_thresh]
 
         # Calculate BPM
         period = lags[1] - lags[0]
         bpm = 60 / (dt * period)
         print(bpm)
         self.mean_hr_bpm = bpm
-        return corr, peaks, lags
+        return corr1, peaks, lags
