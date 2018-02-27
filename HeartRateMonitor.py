@@ -5,7 +5,7 @@ and other processing techniques
 
 import numpy as np
 import pandas as pd
-# import json
+from scipy import signal
 
 
 class HeartRateMonitor(object):
@@ -112,3 +112,33 @@ class HeartRateMonitor(object):
         df = pd.read_csv(filename, names=['Time', 'Voltage'])
         data = df.as_matrix()
         self.data = data
+
+    def detect_bpm(self):
+        data = self.data
+        t = data[:, 0]
+        v = data[:, 1]
+        dt = t[1] - t[0]
+
+        # Remove dc offsets
+        avg_len = 200
+        v_dc = v - np.convolve(v, np.ones(avg_len) / avg_len, mode='same')
+
+        # Autocorrelation
+        std = np.std(v_dc)
+        corr = np.correlate(v_dc, v_dc, mode='full')
+        corr = corr[int(len(corr) / 2):]
+        corr = np.divide(corr, pow(std, 2))
+        # Autocorrelation peak detection with scipy.
+        peaks = signal.find_peaks_cwt(corr, np.arange(1, 20), noise_perc=50,
+                                      min_snr=1.5)
+
+        # Record peaks with correlation > 20
+        corr_thresh = 20
+        lags = peaks[corr[peaks] > corr_thresh]
+
+        # Calculate BPM
+        period = lags[1] - lags[0]
+        bpm = 60 / (dt * period)
+        print(bpm)
+        self.mean_hr_bpm = bpm
+        return corr, peaks, lags
