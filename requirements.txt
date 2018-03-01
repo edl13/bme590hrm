@@ -3,4 +3,3 @@ pytest
 pytest-pep8
 pandas
 scipy
-loggin-config
