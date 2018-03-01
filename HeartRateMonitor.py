@@ -6,6 +6,10 @@ and other processing techniques
 import numpy as np
 import pandas as pd
 from scipy import signal
+import logging
+from . logging_config import config
+logging.basicConfig(**config)
+log = logging.getLogger(__name__)
 
 
 class HeartRateMonitor(object):
@@ -113,12 +117,38 @@ class HeartRateMonitor(object):
         data = df.as_matrix()
         self.data = data
 
-    def detect_bpm(self):
+    def detect_bpm(self, time=None):
+        '''Detects BPM using autocorrelation.
+        :param time: Time over which to find mean BPM. Defaults to find mean
+        from beginning to end of given signal. If scalar given, mean is found
+        from t = 0 to t = time seconds. If two element list or tuple of times
+        is given, mean is found between the two times. Begin and end sample
+        points chosen to be as close to given arguments as possible.'''
+
         data = self.data
         t = data[:, 0]
         v = data[:, 1]
         dt = t[1] - t[0]
+        t_lim = None
 
+        if time is None:
+            t_lim = (0, max(t))
+        elif isinstance(time, (list, tuple)):
+            if(len(time) == 2):
+                t_lim = time
+            else:
+                raise ValueError('''Iterable time input must have two elements
+                      for start and end times''')
+                log.error('''Iterable time input must have two elements for start
+                          and end times''')
+        elif isinstance(time, (int, float)):
+            t_lim = (0, time)
+        else:
+            raise TypeError('''Time argument takes scalar or two element
+                  iterable''')
+            log.error('Time argument takes scalar or two element iterable.')
+
+        (start, end) = self.find_nearest_limits(t, t_lim)
         # Remove dc offsets
         avg_len = 50
         v_dc = v - np.convolve(v, np.ones(avg_len) / avg_len, mode='same')
@@ -145,4 +175,19 @@ class HeartRateMonitor(object):
         bpm = 60 / (dt * period)
         print(bpm)
         self.mean_hr_bpm = bpm
-        return corr1, peaks, lags
+        return bpm
+
+    def find_nearest_limits(self, t, t_lim):
+        '''Find nearest t values to given limits
+
+        :param t: Array of sample times
+        :param t_lim: Two element tuple of start and end times
+        :return: Tuple of start and end indices of t
+        '''
+
+        begin = t_lim[0]
+        end = t_lim[1]
+
+        begin_i = np.argmin(np.abs(t - begin))
+        end_i = np.argmin(np.abs(t - end))
+        return (begin_i, end_i)
