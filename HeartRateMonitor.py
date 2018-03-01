@@ -173,7 +173,6 @@ class HeartRateMonitor(object):
         # Calculate BPM
         period = lags[1] - lags[0]
         bpm = 60 / (dt * period)
-        print(bpm)
         self.mean_hr_bpm = bpm
         return bpm
 
@@ -191,3 +190,6 @@ class HeartRateMonitor(object):
         begin_i = np.argmin(np.abs(t - begin))
         end_i = np.argmin(np.abs(t - end))
         return (begin_i, end_i)
+
+    def detect_voltage_extremes(self, thresh=300):
+        pass
