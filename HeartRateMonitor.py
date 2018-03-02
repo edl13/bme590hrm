@@ -7,12 +7,16 @@ import numpy as np
 import pandas as pd
 from scipy import signal
 import logging
-import matplotlib.pyplot as plt
-import matplotlib
+import matplotlib as mpl
+import os
 from logging_config import config
+if os.environ.get('DISPLAY', '') == '':
+        print('no display found. Using non-interactive Agg backend')
+        mpl.use('Agg')
+import matplotlib.pyplot as plt
+
 logging.basicConfig(**config)
 log = logging.getLogger(__name__)
-matplotlib.use('Agg')
 
 
 class HeartRateMonitor(object):
