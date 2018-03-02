@@ -184,6 +184,9 @@ class HeartRateMonitor(object):
         is given, mean is found between the two times. Begin and end sample
         points chosen to be as close to given arguments as possible.
         :param units: Time units of the time limits parameter
+        :returns: Beats per minute
+        :raise IndexError: Only one beat detected in time limits, cannot find
+        BPM
         '''
 
         if units is None:
@@ -439,6 +442,12 @@ class HeartRateMonitor(object):
                 self.data[i, 1] = interp_v
 
     def export_json(self, filename=None):
+        '''Export ECG characteristics as JSON file
+
+        :param filename: Filename to store as. Default is input filename as
+        .json
+        '''
+
         data_dict = {
             'BPM': self.mean_hr_bpm,
             'Voltage Min': self.voltage_extremes[0],
