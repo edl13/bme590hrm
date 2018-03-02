@@ -8,7 +8,7 @@ logging.basicConfig(**config)
 log = logging.getLogger(__name__)
 
 
-def test_import_data():
+def test_units():
     log.debug('Begin units testing')
     from ..HeartRateMonitor import HeartRateMonitor
     with pytest.raises(ValueError):
