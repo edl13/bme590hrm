@@ -8,9 +8,11 @@ import pandas as pd
 from scipy import signal
 import logging
 import matplotlib.pyplot as plt
+import matplotlib
 from logging_config import config
 logging.basicConfig(**config)
 log = logging.getLogger(__name__)
+matplotlib.use('Agg')
 
 
 class HeartRateMonitor(object):
