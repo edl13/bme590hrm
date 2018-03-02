@@ -58,6 +58,8 @@ class HeartRateMonitor(object):
         else:
             self.data = []
 
+        self.__clean_data()
+
         log.debug('Converting data to ms and mV')
         self.__convert_data()
 
@@ -379,3 +381,42 @@ class HeartRateMonitor(object):
         log.info('Duration of ECG found to be {} ms'.format(dur))
         self.duration = dur
         return dur
+
+    def __clean_data(self):
+        '''Find NaN in input data and fixes gap'''
+
+        log.debug('Begin cleaning data')
+        interp_t = 0
+        interp_v = 0
+        for i, t in enumerate(self.data[:, 0]):
+            if np.isnan(t):
+                if(i == 0):
+                    interp_t = self.data[i + 1, 0]
+                elif i == len(self.data[:, 0]) - 1:
+                    interp_t = self.data[i - 1, 0]
+                else:
+                    interp_t = (self.data[i - 1, 0] + self.data[i + 1, 0]) / 2
+
+                warnings.warn('''Blank time value at index {} interpolating as
+                              {}'''.format(i, interp_t))
+
+                log.info('''Blank time value at index {} interpolating as
+                              {}'''.format(i, interp_t))
+                self.data[i, 0] = interp_t
+
+        for i, t in enumerate(self.data[:, 1]):
+            if np.isnan(t):
+                log.debug('{}{}'.format(t, np.isnan(t)))
+                if(i == 0):
+                    interp_v = self.data[i + 1, 1]
+                elif i == len(self.data[:, 1]) - 1:
+                    interp_v = self.data[i - 1, 1]
+                else:
+                    interp_v = (self.data[i - 1, 1] + self.data[i + 1, 1]) / 2
+
+                warnings.warn('''Blank voltage value at index {} interpolating
+                              as {}'''.format(i, interp_v))
+
+                log.info('''Blank voltage value at index {} interpolating
+                              as {}'''.format(i, interp_v))
+                self.data[i, 1] = interp_v
