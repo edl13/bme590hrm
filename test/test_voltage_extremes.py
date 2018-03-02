@@ -8,11 +8,11 @@ logging.basicConfig(**config)
 log = logging.getLogger(__name__)
 
 
-def test_import_data():
+def test_voltage_extremes():
     log.debug('Begin voltage extreme detection testing')
     from ..HeartRateMonitor import HeartRateMonitor
     hrm = HeartRateMonitor(filename='test_data/test_data1.csv', t_units='s',
                            v_units='V')
     with pytest.warns(UserWarning):
-        hrm.detect_voltage_extremes(thresh=300)
-    assert hrm.voltage_extremes == pytest.approx(1050, -680)
+        hrm.detect_voltage_extremes(thresh=300, units='mV')
+    assert hrm.voltage_extremes == pytest.approx((-680, 1050))

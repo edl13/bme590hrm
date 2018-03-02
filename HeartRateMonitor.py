@@ -276,16 +276,24 @@ class HeartRateMonitor(object):
 
         thresh_conv = thresh * v_converter
 
-        t_thresh = np.where(np.abs(self.data[:, 1]) >= thresh_conv)
+        t_thresh = np.where(np.abs(self.data[:, 1]) >= thresh_conv)[0]
+        log.debug('V thresh set to {} mV'.format(thresh_conv))
+        log.debug('{} data points outside thresh'.format(len(t_thresh)))
 
-        for t in t_thresh:
-            warnings.warn('''Extreme voltage above {}{} of {}{} found at
-                         {}{}'''.format(
-                thresh, units, self.data[t, 1] / self.v_units, self.v_units,
-                t / self.t_units, self.t_units))
+        if len(t_thresh) > 0:
+            for t in t_thresh:
+                warnings.warn('''Extreme voltage above {}{} of {}{} found at
+                              {}{}'''.format(
+                              thresh, units, np.divide(self.data[t, 1],
+                                                       self.__v_converter),
+                              self.v_units,
+                              np.divide(t, self.__t_converter), self.t_units))
 
         max_v = np.max(self.data[:, 1])
         min_v = np.min(self.data[:, 1])
+
+        log.info('(min, max) voltage set to {}'.format((min_v, max_v)))
+
         self.voltage_extremes = (min_v, max_v)
         return (min_v, max_v)
 
