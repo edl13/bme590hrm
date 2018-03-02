@@ -348,3 +348,24 @@ class HeartRateMonitor(object):
         filt = np.multiply(filt, filt)
 
         self.__filt_data = filt
+
+    def get_peaks(self):
+        '''Detect peaks and return timing of beats array
+
+        :return beats: Beat times array in ms'''
+
+        widths = np.arange(1, 400)
+
+        log.info('Begin peak detection')
+        peaks = signal.find_peaks_cwt(
+            self.__filt_data,
+            widths,
+            noise_perc=10,
+            min_snr=20,
+            max_distances=np.divide(widths, 10))
+
+        self.beats = peaks
+        self.num_beats = len(peaks)
+        log.info('{} beats found in signal'.format(len(peaks)))
+
+        return(peaks)
