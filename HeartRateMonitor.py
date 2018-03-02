@@ -12,8 +12,8 @@ import os
 from logging_config import config
 import warnings
 if os.environ.get('DISPLAY', '') == '':
-        print('no display found. Using non-interactive Agg backend')
-        mpl.use('Agg')
+    print('no display found. Using non-interactive Agg backend')
+    mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 logging.basicConfig(**config)
@@ -25,8 +25,7 @@ class HeartRateMonitor(object):
     ECG signal
     '''
 
-    def __init__(self, data=None, filename=None, t_units='ms',
-                 v_units='mV'):
+    def __init__(self, data=None, filename=None, t_units='ms', v_units='mV'):
         '''Initialize HeartRateMonitor object
 
         :param data: 2D numpy array with time values in the first column and
@@ -47,8 +46,9 @@ class HeartRateMonitor(object):
         (self.__t_converter, self.__v_converter) = self.__get_converters(
             self.t_units, self.v_units)
         log.debug('''T units/conversion {}/{}. V units/converstion
-                  {}/{}'.format(t_units, self.__t_converter, v_units,
-                                self.__v_converter)''')
+                  {}/{}'''.format(self.t_units, self.__t_converter,
+                                  self.v_units, self.__v_converter))
+
         if data is None and filename is None:
             self.data = []
         elif data is not None:
@@ -174,8 +174,8 @@ class HeartRateMonitor(object):
 
         data = self.data
         t_lim = None
-        (lim_converter, v_con_temp) = self.__get_converters(units,
-                                                            self.v_units)
+        (lim_converter, v_con_temp) = self.__get_converters(
+            units, self.v_units)
         t_raw = data[:, 0]
         dt = t_raw[1] - t_raw[0]
 
@@ -184,14 +184,15 @@ class HeartRateMonitor(object):
         if time is None:
             t_lim = np.array((0, max(t_raw)))
         elif isinstance(time, (list, tuple)):
-            if(len(time) == 2):
+            if (len(time) == 2):
                 time = np.array(time)
                 time *= lim_converter
                 t_lim = time
             else:
                 raise ValueError('''Iterable time input must have two elements
                       for start and end times''')
-                log.error('''Iterable time input must have two elements for start
+                log.error(
+                    '''Iterable time input must have two elements for start
                           and end times''')
         elif isinstance(time, (int, float)):
             time *= lim_converter
@@ -214,9 +215,12 @@ class HeartRateMonitor(object):
 
         # Autocorrelation peak detection with scipy.
         widths = np.arange(1, 400)
-        peaks = signal.find_peaks_cwt(corr1, widths, noise_perc=10,
-                                      min_snr=20,
-                                      max_distances=np.divide(widths, 10))
+        peaks = signal.find_peaks_cwt(
+            corr1,
+            widths,
+            noise_perc=10,
+            min_snr=20,
+            max_distances=np.divide(widths, 10))
 
         # Calculate BPM
         try:
@@ -224,7 +228,8 @@ class HeartRateMonitor(object):
         except IndexError:
             log.error('''Only one peak detected in time region specified.
                       Expand time region to detect BPM.''')
-            raise IndexError('''Only one peak detected in time region specified.
+            raise IndexError(
+                '''Only one peak detected in time region specified.
                               Unable to detect BPM''')
 
         bpm = 60 * self.__t_converter / (dt * period)
@@ -253,16 +258,38 @@ class HeartRateMonitor(object):
 
     def detect_voltage_extremes(self, thresh=None, units=None):
         '''Detect voltage extremes above positive and negative threshold.
+        Returns maximum and minimum voltages.
 
-        :param thresh: Positive threshold voltage for extreme values (Defaults to +- 300
-        mV)
+        :param thresh: Positive threshold voltage for extreme values (Defaults
+        to +- 300mV)
         :param units: Units of threshold. Defaults to class units
+        :return: Tuple (minimum voltage, maximum voltage)
         '''
 
-        t_extreme = self.data[self.data[:, 1] > thresh
+        if units is None:
+            units = self.v_units
+
+        (t_converter, v_converter) = self.__get_converters(self.t_units, units)
+
+        if thresh is None:
+            thresh = 300 / v_converter
+
+        thresh_conv = thresh * v_converter
+
+        t_thresh = np.where(np.abs(self.data[:, 1]) >= thresh_conv)
+
+        for t in t_thresh:
+            warnings.warn('''Extreme voltage above {}{} of {}{} found at
+                         {}{}'''.format(
+                thresh, units, self.data[t, 1] / self.v_units, self.v_units,
+                t / self.t_units, self.t_units))
+
+        max_v = np.max(self.data[:, 1])
+        min_v = np.min(self.data[:, 1])
+        self.voltage_extremes = (min_v, max_v)
+        return (min_v, max_v)
 
     def __get_converters(self, t_units, v_units):
-
         if type(t_units) is not str:
             log.error('Non-string time units')
             raise TypeError('Please input string for time units')
@@ -271,22 +298,22 @@ class HeartRateMonitor(object):
             log.error('Non-string voltage units')
             raise TypeError('Please input string for voltage units')
 
-        if(t_units == 's'):
+        if (t_units == 's'):
             t_converter = 1000
-        elif(t_units == 'ms'):
+        elif (t_units == 'ms'):
             t_converter = 1
-        elif(t_units == 'min'):
+        elif (t_units == 'min'):
             t_converter = 60000
         else:
-            log.error('Unknown time units')
+            log.error('Unknown time units of {}'.format(t_units))
             raise ValueError('Time units must be \'s\', \'ms\', or \'min\'.')
 
-        if(v_units == 'V'):
+        if (v_units == 'V'):
             v_converter = 1000
-        elif(v_units == 'mV'):
+        elif (v_units == 'mV'):
             v_converter = 1
         else:
-            log.error('Unknown voltage units')
+            log.error('Unknown voltage units of {}'.format(v_units))
             raise ValueError('Voltage units must be \'mV\' or \'V\'.')
 
         return (t_converter, v_converter)
