@@ -11,6 +11,7 @@ import matplotlib as mpl
 import os
 from logging_config import config
 import warnings
+import json
 if os.environ.get('DISPLAY', '') == '':
     print('no display found. Using non-interactive Agg backend')
     mpl.use('Agg')
@@ -54,6 +55,7 @@ class HeartRateMonitor(object):
         elif data is not None:
             self.data = data
         elif filename is not None:
+            self.filename = filename
             self.import_data(filename)
         else:
             self.data = []
@@ -72,6 +74,19 @@ class HeartRateMonitor(object):
 
         log.debug('Filtering data')
         self.__filter_data()
+
+    @property
+    def filename(self):
+        '''Filename of imported data'''
+        return self.__filename
+
+    @filename.setter
+    def filename(self, filename):
+        '''Setter for filename
+
+        :param filename: Filename'''
+
+        self.__filename = filename
 
     @property
     def data(self):
@@ -241,7 +256,7 @@ class HeartRateMonitor(object):
         plt.ion()
         plt.show()
         log.info('BPM found to be {}'.format(bpm))
-        return v, corr1, peaks, bpm
+        return bpm
 
     def find_nearest_limits(self, t, t_lim):
         '''Find nearest t values to given limits
@@ -286,10 +301,10 @@ class HeartRateMonitor(object):
             for t in t_thresh:
                 warnings.warn('''Extreme voltage above {}{} of {}{} found at
                               {}{}'''.format(
-                              thresh, units, np.divide(self.data[t, 1],
-                                                       self.__v_converter),
-                              self.v_units,
-                              np.divide(t, self.__t_converter), self.t_units))
+                    thresh, units,
+                    np.divide(self.data[t, 1],
+                              self.__v_converter), self.v_units,
+                    np.divide(t, self.__t_converter), self.t_units))
 
         max_v = np.max(self.data[:, 1])
         min_v = np.min(self.data[:, 1])
@@ -366,11 +381,13 @@ class HeartRateMonitor(object):
             min_snr=20,
             max_distances=np.divide(widths, 10))
 
-        self.beats = peaks
+        dt = self.data[1, 0] - self.data[0, 0]
+
+        self.beats = np.multiply(peaks, dt)
         self.num_beats = len(peaks)
         log.info('{} beats found in signal'.format(len(peaks)))
 
-        return(peaks)
+        return (peaks)
 
     def get_duration(self):
         '''Find signal duration
@@ -390,7 +407,7 @@ class HeartRateMonitor(object):
         interp_v = 0
         for i, t in enumerate(self.data[:, 0]):
             if np.isnan(t):
-                if(i == 0):
+                if (i == 0):
                     interp_t = self.data[i + 1, 0]
                 elif i == len(self.data[:, 0]) - 1:
                     interp_t = self.data[i - 1, 0]
@@ -407,7 +424,7 @@ class HeartRateMonitor(object):
         for i, t in enumerate(self.data[:, 1]):
             if np.isnan(t):
                 log.debug('{}{}'.format(t, np.isnan(t)))
-                if(i == 0):
+                if (i == 0):
                     interp_v = self.data[i + 1, 1]
                 elif i == len(self.data[:, 1]) - 1:
                     interp_v = self.data[i - 1, 1]
@@ -420,3 +437,27 @@ class HeartRateMonitor(object):
                 log.info('''Blank voltage value at index {} interpolating
                               as {}'''.format(i, interp_v))
                 self.data[i, 1] = interp_v
+
+    def export_json(self, filename=None):
+        data_dict = {
+            'BPM': self.mean_hr_bpm,
+            'Voltage Min': self.voltage_extremes[0],
+            'Voltage Max': self.voltage_extremes[1],
+            'Duration': self.duration,
+            'Number of Beats': self.num_beats,
+            'Beat Times': self.beats.tolist()
+        }
+
+        if filename is None:
+            if self.filename is not None:
+                csv_name = self.filename
+                filename = os.path.splitext(csv_name)[0] + '.json'
+                log.info('Filename is {}'.format(filename))
+            else:
+                raise ValueError('''No filename specified at object
+                                 initialization or at export_json call''')
+
+        log.info('Writing json to {}'.format(filename))
+
+        with open(filename, 'w') as output:
+            json.dump(data_dict, output)
