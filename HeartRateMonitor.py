@@ -369,3 +369,13 @@ class HeartRateMonitor(object):
         log.info('{} beats found in signal'.format(len(peaks)))
 
         return(peaks)
+
+    def get_duration(self):
+        '''Find signal duration
+
+        :return duration: Total duration'''
+
+        dur = max(self.data[:, 0]) - min(self.data[:, 0])
+        log.info('Duration of ECG found to be {} ms'.format(dur))
+        self.duration = dur
+        return dur
