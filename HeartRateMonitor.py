@@ -9,7 +9,6 @@ from scipy import signal
 import logging
 import matplotlib as mpl
 import os
-from logging_config import config
 import warnings
 import json
 if os.environ.get('DISPLAY', '') == '':
@@ -17,7 +16,7 @@ if os.environ.get('DISPLAY', '') == '':
     mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-logging.basicConfig(**config)
+logging.basicConfig(filename='out.log', level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 
@@ -179,14 +178,15 @@ class HeartRateMonitor(object):
         '''Detects BPM using autocorrelation.
 
         :param time: Time over which to find mean BPM. Defaults to find mean
-        from beginning to end of given signal. If scalar given, mean is found
-        from t = 0 to t = time seconds. If two element list or tuple of times
-        is given, mean is found between the two times. Begin and end sample
-        points chosen to be as close to given arguments as possible.
+            from beginning to end of given signal. If scalar given, mean is
+            found from t = 0 to t = time seconds. If two element list or
+            tuple of times is given, mean is found between the two times.
+            Begin and end sample points chosen to be as close to given
+            arguments as possible.
         :param units: Time units of the time limits parameter
         :returns: Beats per minute
         :raise IndexError: Only one beat detected in time limits, cannot find
-        BPM
+            BPM
         '''
 
         if units is None:
@@ -278,10 +278,10 @@ class HeartRateMonitor(object):
 
     def detect_voltage_extremes(self, thresh=None, units=None):
         '''Detect voltage extremes above positive and negative threshold.
-        Returns maximum and minimum voltages.
+            Returns maximum and minimum voltages.
 
         :param thresh: Positive threshold voltage for extreme values (Defaults
-        to +- 300mV)
+            to +- 300mV)
         :param units: Units of threshold. Defaults to class units
         :return: Tuple (minimum voltage, maximum voltage)
         '''
@@ -445,7 +445,7 @@ class HeartRateMonitor(object):
         '''Export ECG characteristics as JSON file
 
         :param filename: Filename to store as. Default is input filename as
-        .json
+            .json
         '''
 
         data_dict = {

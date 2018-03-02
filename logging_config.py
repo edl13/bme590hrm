@@ -1,7 +1,7 @@
 import logging
 
 config = dict(
-    filename='test.log',
+    filename='out.log',
     filemode='w',
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',

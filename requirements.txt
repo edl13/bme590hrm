@@ -4,3 +4,4 @@ pytest-pep8
 pandas
 scipy
 matplotlib
+sphinx
