@@ -10,6 +10,7 @@ import logging
 import matplotlib as mpl
 import os
 from logging_config import config
+import warnings
 if os.environ.get('DISPLAY', '') == '':
         print('no display found. Using non-interactive Agg backend')
         mpl.use('Agg')
@@ -37,13 +38,17 @@ class HeartRateMonitor(object):
         :param v_units: Voltage units, either 'mV' or 'V'
         '''
 
+        log.info('Initalize HeartRateMonitor')
+
         self.t_units = t_units
         self.v_units = v_units
         self.__t_converter = None
         self.__v_converter = None
         (self.__t_converter, self.__v_converter) = self.__get_converters(
             self.t_units, self.v_units)
-
+        log.debug('''T units/conversion {}/{}. V units/converstion
+                  {}/{}'.format(t_units, self.__t_converter, v_units,
+                                self.__v_converter)''')
         if data is None and filename is None:
             self.data = []
         elif data is not None:
@@ -53,6 +58,7 @@ class HeartRateMonitor(object):
         else:
             self.data = []
 
+        log.debug('Converting data to ms and mV')
         self.__convert_data()
 
         self.mean_hr_bpm = None
@@ -62,6 +68,7 @@ class HeartRateMonitor(object):
         self.beats = None
         self.__filt_data = None
 
+        log.debug('Filtering data')
         self.__filter_data()
 
     @property
@@ -137,10 +144,15 @@ class HeartRateMonitor(object):
         self.__beats = beats
 
     def import_data(self, filename):
+        '''Import data from file
+
+        :param filename: csv file to import from
+        '''
+
         df = pd.read_csv(filename, names=['Time', 'Voltage'])
         data = df.as_matrix()
         self.data = data
-        log.debug(self.data[1, 0])
+        log.info('Successfully imported {}'.format(filename))
 
     def __convert_data(self):
         self.data[:, 0] *= self.__t_converter
@@ -148,11 +160,14 @@ class HeartRateMonitor(object):
 
     def detect_bpm(self, time=None, units=None):
         '''Detects BPM using autocorrelation.
+
         :param time: Time over which to find mean BPM. Defaults to find mean
         from beginning to end of given signal. If scalar given, mean is found
         from t = 0 to t = time seconds. If two element list or tuple of times
         is given, mean is found between the two times. Begin and end sample
-        points chosen to be as close to given arguments as possible.'''
+        points chosen to be as close to given arguments as possible.
+        :param units: Time units of the time limits parameter
+        '''
 
         if units is None:
             units = self.t_units
@@ -187,20 +202,15 @@ class HeartRateMonitor(object):
             log.error('Time argument takes scalar or two element iterable.')
 
         (start, end) = self.find_nearest_limits(t_raw, t_lim)
-        print(start, end, time)
+        log.info('''Closest start time: {}. Closest end time:
+                 {}'''.format(t_raw[start], t_raw[end]))
+
         v = self.__filt_data[start:end]
 
         # Remove dc offsets
-        # avg_len = 50
-        # v_dc = v - np.convolve(
-        #   v, np.ones(avg_len) / avg_len, mode='same')
-        # Autocorrelation
-        # std = np.std(v_dc)
         corr1 = np.correlate(v, v, mode='full')
         corr1 = np.divide(corr1, max(corr1))
-        # corr2 = np.correlate(corr1, corr1, mode='full')
         corr1 = corr1[int(len(corr1) / 2) + 000:]
-        # corr1 = np.multiply(corr1, corr1)
 
         # Autocorrelation peak detection with scipy.
         widths = np.arange(1, 400)
@@ -212,7 +222,9 @@ class HeartRateMonitor(object):
         try:
             period = peaks[1] - peaks[0]
         except IndexError:
-            raise UserWarning('''Only one peak detected in time region specified.
+            log.error('''Only one peak detected in time region specified.
+                      Expand time region to detect BPM.''')
+            raise IndexError('''Only one peak detected in time region specified.
                               Unable to detect BPM''')
 
         bpm = 60 * self.__t_converter / (dt * period)
@@ -239,15 +251,24 @@ class HeartRateMonitor(object):
         end_i = np.argmin(np.abs(t - end))
         return (begin_i, end_i)
 
-    def detect_voltage_extremes(self, thresh=300):
-        pass
+    def detect_voltage_extremes(self, thresh=None, units=None):
+        '''Detect voltage extremes above positive and negative threshold.
+
+        :param thresh: Positive threshold voltage for extreme values (Defaults to +- 300
+        mV)
+        :param units: Units of threshold. Defaults to class units
+        '''
+
+        t_extreme = self.data[self.data[:, 1] > thresh
 
     def __get_converters(self, t_units, v_units):
 
         if type(t_units) is not str:
+            log.error('Non-string time units')
             raise TypeError('Please input string for time units')
 
         if type(v_units) is not str:
+            log.error('Non-string voltage units')
             raise TypeError('Please input string for voltage units')
 
         if(t_units == 's'):
@@ -257,6 +278,7 @@ class HeartRateMonitor(object):
         elif(t_units == 'min'):
             t_converter = 60000
         else:
+            log.error('Unknown time units')
             raise ValueError('Time units must be \'s\', \'ms\', or \'min\'.')
 
         if(v_units == 'V'):
@@ -264,19 +286,22 @@ class HeartRateMonitor(object):
         elif(v_units == 'mV'):
             v_converter = 1
         else:
+            log.error('Unknown voltage units')
             raise ValueError('Voltage units must be \'mV\' or \'V\'.')
 
         return (t_converter, v_converter)
 
     def __filter_data(self):
         '''Filter raw data with 5-15 Hz passband according to Pan-Tompkins
-        algorithm'''
+        algorithm, then rectified and squared'''
 
         dt = self.data[1, 0] - self.data[0, 0]  # dt in ms
         nyq = (1 / (dt / 1000)) * 0.5
+        log.info('Nyquist frequency found to be {} Hz'.format(nyq))
 
         low = 5 / nyq
         hi = 15 / nyq
+        log.info('Cutoff frequencies set to {} to {} Hz'.format(low, hi))
 
         b, a = signal.butter(2, (low, hi), btype='bandpass')
         filt = signal.lfilter(b, a, self.data[:, 1])
@@ -288,4 +313,3 @@ class HeartRateMonitor(object):
         filt = np.multiply(filt, filt)
 
         self.__filt_data = filt
-        plt.ion()
