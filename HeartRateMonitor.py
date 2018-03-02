@@ -17,14 +17,25 @@ class HeartRateMonitor(object):
     ECG signal
     '''
 
-    def __init__(self, data=None, filename=None):
+    def __init__(self, data=None, filename=None, t_units='ms',
+                 v_units='mV'):
         '''Initialize HeartRateMonitor object
 
         :param data: 2D numpy array with time values in the first column and
         ECG voltage values in the second column. Defaults to None.
         :param filename: CSV file with time in first column and voltage in the
         second column. Defaults to None.
+        :param t_units: Time units, either 'ms', 's', or 'min'. Defaults to
+        's'.
+        :param v_units: Voltage units, either 'mV' or 'V'
         '''
+
+        self.t_units = t_units
+        self.v_units = v_units
+        self.__t_converter = None
+        self.__v_converter = None
+        self.__set_converters()
+
         if data is None and filename is None:
             self.data = []
         elif data is not None:
@@ -116,6 +127,8 @@ class HeartRateMonitor(object):
         df = pd.read_csv(filename, names=['Time', 'Voltage'])
         data = df.as_matrix()
         self.data = data
+        self.data[:, 0] = np.multiply(self.data[:, 0], self.__t_converter)
+        self.data[:, 1] = np. multiply(self.data[:, 1], self.__v_converter)
 
     def detect_bpm(self, time=None):
         '''Detects BPM using autocorrelation.
@@ -191,3 +204,27 @@ class HeartRateMonitor(object):
         begin_i = np.argmin(np.abs(t - begin))
         end_i = np.argmin(np.abs(t - end))
         return (begin_i, end_i)
+
+    def __set_converters(self):
+
+        if self.t_units is not str:
+            raise TypeError('Please input string for time units')
+
+        if self.v_units is not str:
+            raise TypeError('Please input string for voltage units')
+
+        if(self.t_units == 's'):
+            self.t_converter = 0.001
+        elif(self.t_units == 'ms'):
+            self.t_converter = 1
+        elif(self.t_units == 'min'):
+            self.t_converter = (1 / 60) * (1 / 1000)
+        else:
+            raise ValueError('Time units must be \'s\', \'ms\', or \'min\'.')
+
+        if(self.v_units == 'V'):
+            self.v_converter = 0.001
+        elif(self.v_units == 'mV'):
+            self.v_converter = 1
+        else:
+            raise ValueError('Voltage units must be \'mV\' or \'V\'.')
