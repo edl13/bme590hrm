@@ -178,10 +178,11 @@ class HeartRateMonitor(object):
         '''Detects BPM using autocorrelation.
 
         :param time: Time over which to find mean BPM. Defaults to find mean
-            from beginning to end of given signal. If scalar given, mean is found
-            from t = 0 to t = time seconds. If two element list or tuple of times
-            is given, mean is found between the two times. Begin and end sample
-            points chosen to be as close to given arguments as possible.
+            from beginning to end of given signal. If scalar given, mean is
+            found from t = 0 to t = time seconds. If two element list or
+            tuple of times is given, mean is found between the two times.
+            Begin and end sample points chosen to be as close to given
+            arguments as possible.
         :param units: Time units of the time limits parameter
         :returns: Beats per minute
         :raise IndexError: Only one beat detected in time limits, cannot find
