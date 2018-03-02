@@ -21,6 +21,7 @@ def test_import_data():
     hrm = HeartRateMonitor(filename='test_data/test_data1.csv', t_units='s',
                            v_units='V')
 
-    assert hrm._HeartRateMonitor__t_converter == 0.001
-    assert hrm._HeartRateMonitor__v_converter == 1
+    assert hrm._HeartRateMonitor__t_converter == 1000
+    assert hrm._HeartRateMonitor__v_converter == 1000
     assert hrm.data[1, 0] == 3
+    log.debug('End units testing')
