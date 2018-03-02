@@ -7,7 +7,7 @@ Heart Rate Monitor Project for BME590
 Welcome to my BME590 Heart Rate Monitor project.
 
 ## Use
-Read the [docs](http://edward-liang-heart-rate-monitor.readthedocs.io/en)!
+Read the [docs](http://edward-liang-heart-rate-monitor.readthedocs.io/en/latest/)!
 
 Import the module from HeartRateMonitor.py
 
